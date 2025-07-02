@@ -13,12 +13,9 @@ import os
 import dj_database_url
 from pathlib import Path
 from decouple import config
-from dotenv import load_dotenv
 
-load_dotenv()
-
-LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
-LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
+LINE_CHANNEL_SECRET = config("LINE_CHANNEL_SECRET")
+LINE_CHANNEL_ACCESS_TOKEN = config("LINE_CHANNEL_ACCESS_TOKEN")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
