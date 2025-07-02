@@ -1,0 +1,484 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>提出シフト入力</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        /* 全体のスタイル */
+        body {
+            font-family: "Helvetica Neue", Arial, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            margin: 0;
+            padding: 0 10px 30px;
+        }
+
+        h2 {
+            text-align: center;
+            font-size: 26px;
+            color: #2e7d32;
+            margin: 20px 0;
+        }
+
+        .weekday-container {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            background-color: #ffffff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .weekday-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #2e7d32;
+        }
+
+        label {
+            font-size: 15px;
+            margin-right: 10px;
+        }
+
+        .time-inputs {
+            margin-bottom: 15px;
+        }
+
+        /* カスタムドロップダウン */
+        .dropdown {
+            position: relative;
+            width: 130px;
+            margin-right: 10px;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+
+        .dropdown-label {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background-color: #fff;
+            cursor: pointer;
+            font-size: 15px;
+            color: #444;
+            text-align: center;
+            transition: border 0.2s;
+        }
+
+        .dropdown-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 160px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background-color: #fff;
+            z-index: 1000;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .dropdown-list div {
+            padding: 10px;
+            cursor: pointer;
+            font-size: 15px;
+            transition: background-color 0.2s;
+        }
+
+        .dropdown-list div:hover {
+            background-color: #66bb6a;
+            color: white;
+        }
+
+        input[type="checkbox"] {
+            margin: 10px 0;
+        }
+
+        .unavailable-text {
+            color: red;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 14px;
+            font-size: 17px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .time-inputs {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            /* ラベルとドロップダウンの間の余白 */
+        }
+
+        .time-inputs label {
+            flex: 0 0 80px;
+            /* ラベルの幅を固定 */
+            margin-bottom: 0;
+        }
+
+        .custom-dropdown {
+            flex: 1;
+            /* ドロップダウンが残りスペースを使う */
+            min-width: 120px;
+        }
+
+        /* スマホ対応 */
+        @media screen and (max-width: 768px) {
+            .dropdown {
+                width: 100%;
+                margin-right: 0;
+            }
+
+            .dropdown-label {
+                font-size: 16px;
+                padding: 12px;
+            }
+
+            .weekday-container {
+                padding: 12px;
+            }
+
+            input[type="text"] {
+                font-size: 17px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <h2>勤務時間入力</h2>
+        <div style="margin: 20px 0; text-align: center;">
+            <button @click="applyContractShift">契約シフトを反映</button>
+            <button @click="applyPreviousShift">前回の提出内容をコピー</button>
+            <button @click="clearAllShifts" style="background-color: #e53935;">全てリセット</button>
+        </div>
+        <form @submit.prevent="submitForm">
+            <div class="weekday-container" v-for="(day, index) in weekdays" :key="index">
+                <div class="weekday-name" v-text="day.name"></div>
+                <div class="weekday-name" v-text="day.displayDate"></div>
+                <label>
+                    <input type="checkbox" v-model="day.unavailable" /> 出勤不可
+                </label>
+
+                <div v-if="!day.unavailable" class="time-inputs">
+                    <label>開始時間:</label>
+                    <custom-dropdown :options="timeOptions" v-model="day.start_time" placeholder="選択"></custom-dropdown>
+
+                    <label>終了時間:</label>
+                    <custom-dropdown :options="timeOptions" v-model="day.end_time" placeholder="選択"></custom-dropdown>
+                </div>
+                <div v-else class="unavailable-text">この日は勤務できません</div>
+                <div style="margin-top: 10px;">
+                    <button type="button" @click="clearShift(index)"
+                        style="background-color: #e57373;">この日の入力をリセット</button>
+
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button type="submit" style="background-color: #4CAF50; color: white; padding: 10px 20px;">
+                    シフトを保存
+                </button>
+            </div>
+    </div>
+    </form>
+    </div>
+
+    <script>
+        // 外部クリックで閉じるカスタムディレクティブ
+        Vue.directive('click-outside', {
+            bind(el, binding, vnode) {
+                el.clickOutsideEvent = function (event) {
+                    if (!(el == event.target || el.contains(event.target))) {
+                        vnode.context[binding.expression](event);
+                    }
+                };
+                document.body.addEventListener('click', el.clickOutsideEvent);
+            },
+            unbind(el) {
+                document.body.removeEventListener('click', el.clickOutsideEvent);
+            },
+        });
+
+        Vue.component("custom-dropdown", {
+            props: {
+                value: String,
+                options: {
+                    type: Array,
+                    default: () => [],
+                },
+                placeholder: {
+                    type: String,
+                    default: "選択してください",
+                },
+            },
+            data() {
+                return {
+                    selected: this.value || "",
+                    open: false,
+                };
+            },
+            watch: {
+                value(newVal) {
+                    this.selected = newVal || "";
+                },
+            },
+            methods: {
+                toggle() {
+                    this.open = !this.open;
+                },
+                select(val) {
+                    this.selected = val;
+                    this.$emit("input", val);
+                    this.open = false;
+                },
+                close() {
+                    this.open = false;
+                },
+            },
+            template: `
+            {% verbatim %}
+  <div class="dropdown" v-click-outside="close" tabindex="0" @blur="close">
+    <div class="dropdown-label" @click="toggle">
+      {{ selected || placeholder }}
+    </div>
+    <div v-if="open" class="dropdown-list">
+      <div v-for="option in options" :key="option" @click="select(option)">
+        {{ option }}
+      </div>
+    </div>
+  </div>
+  {% endverbatim %}
+  `,
+        });
+
+
+        const app = new Vue({
+            el: "#app",
+            data: {
+                weekdays: [
+                    { name: "月曜日", start_time: "", end_time: "", unavailable: false, displayDate: "" },
+                    { name: "火曜日", start_time: "", end_time: "", unavailable: false, displayDate: "" },
+                    { name: "水曜日", start_time: "", end_time: "", unavailable: false, displayDate: "" },
+                    { name: "木曜日", start_time: "", end_time: "", unavailable: false, displayDate: "" },
+                    { name: "金曜日", start_time: "", end_time: "", unavailable: false, displayDate: "" },
+                    { name: "土曜日", start_time: "", end_time: "", unavailable: false, displayDate: "" },
+                    { name: "日曜日", start_time: "", end_time: "", unavailable: false, displayDate: "" },
+                ],
+                contractShiftDefaults: [],  // 契約シフト用
+                previousSubmittedShift: [], // 前回提出シフト用
+
+                timeOptions: [],
+                userId: "",
+                userName: "",
+            },
+            mounted() {
+                this.generateTimeOptions();
+                this.setNextWeekDates();
+
+                console.log("初期状態", this.weekdays);
+                liff.init({ liffId: "2007279050-gEq82Ame" }).then(() => {
+                    if (!liff.isLoggedIn()) {
+                        liff.login();
+                    } else {
+                        liff.getProfile().then(profile => {
+                            this.userId = profile.userId;
+                            this.userName = profile.displayName;
+
+                            // 契約シフト取得
+                            fetch(`/lineShift/liff/get_contract_shift/?line_user_id=${this.userId}`)
+                                .then(res => res.json())
+                                .then(data => {
+                                    this.contractShiftDefaults = data.shifts;
+                                    console.log("契約シフト:", this.contractShiftDefaults);
+                                    this.applyShiftData(this.contractShiftDefaults); // 初期反映
+                                });
+
+                            // 前回シフト取得
+                            fetch(`/lineShift/liff/get_last_shift/?line_user_id=${this.userId}`)
+                                .then(res => res.json())
+                                .then(data => {
+                                    this.previousSubmittedShift = data.shifts;
+                                });
+                        });
+                    }
+                }).catch(err => {
+                    console.error("LIFF初期化エラー:", err);
+                });
+            },
+
+
+            methods: {
+                // 共通で使える適用メソッド
+                applyShiftData(sourceShifts) {
+                    for (let i = 0; i < this.weekdays.length; i++) {
+                        const source = sourceShifts[i];
+                        if (source) {
+                            this.weekdays[i].start_time = source.start_time || "";
+                            this.weekdays[i].end_time = source.end_time || "";
+                            this.weekdays[i].unavailable = source.unavailable || false;
+                        }
+                    }
+                },
+                applyShiftDataFromObject(sourceShifts) {
+                    this.weekdays.forEach(day => {
+                        const shift = sourceShifts[day.name];
+                        if (shift) {
+                            day.start_time = (shift.start && shift.start !== "null") ? shift.start : "";
+                            day.end_time = (shift.end && shift.end !== "null") ? shift.end : "";
+                            day.unavailable = !!shift.unavailable;
+                        } else {
+                            day.start_time = "";
+                            day.end_time = "";
+                            day.unavailable = false;
+                        }
+                    });
+                },
+
+
+                // 契約シフトを反映
+                applyContractShift() {
+                    console.log("契約シフト反映ボタンが押されました");
+                    this.applyShiftDataFromObject(this.contractShiftDefaults);
+
+                },
+
+                // 前回提出内容を反映
+                applyPreviousShift() {
+                    this.applyShiftData(this.previousSubmittedShift);
+                },
+
+                // 全てリセット
+                clearAllShifts() {
+                    this.weekdays.forEach(day => {
+                        day.start_time = "";
+                        day.end_time = "";
+                        day.unavailable = false;
+                    });
+                },
+
+                // 特定の曜日のみリセット
+                clearShift(index) {
+                    const day = this.weekdays[index];
+                    day.start_time = "";
+                    day.end_time = "";
+                    day.unavailable = false;
+                },
+                generateTimeOptions() {
+                    const options = [];
+                    for (let h = 0; h < 24; h++) {
+                        for (let m = 0; m < 60; m += 30) {
+                            const hh = h.toString().padStart(2, "0");
+                            const mm = m.toString().padStart(2, "0");
+                            options.push(`${hh}:${mm}`);
+                        }
+                    }
+                    this.timeOptions = options;
+                },
+                setNextWeekDates() {
+                    const today = new Date();
+                    const currentDay = today.getDay(); // 0(日)〜6(土)
+                    const diffToMonday = (8 - currentDay) % 7 || 1; // 次の月曜までの日数
+                    const nextMonday = new Date(today);
+                    nextMonday.setDate(today.getDate() + diffToMonday);
+
+                    for (let i = 0; i < 7; i++) {
+                        const date = new Date(nextMonday);
+                        date.setDate(nextMonday.getDate() + i);
+                        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                        const day = date.getDate().toString().padStart(2, '0');
+                        this.weekdays[i].displayDate = `${month}/${day}`;
+                    }
+                },
+
+                submitForm() {
+                    for (let day of this.weekdays) {
+                        if (!day.unavailable) {
+                            if (!day.start_time || !day.end_time) {
+                                alert(`${day.name}の勤務時間を入力してください`);
+                                return;
+                            }
+
+                            const start = parseInt(day.start_time.replace(':', ''), 10);
+                            const end = parseInt(day.end_time.replace(':', ''), 10);
+                            if (start >= end) {
+                                alert(`${day.name}の終了時刻は開始時刻より後にしてください`);
+                                return;
+                            }
+                        }
+                    }
+
+                    // 送信用のデータ整形
+                    const shiftData = this.weekdays.map(day => ({
+                        name: day.name,
+                        date: day.displayDate,
+                        start_time: day.start_time,
+                        end_time: day.end_time,
+                        unavailable: day.unavailable,
+                    }));
+                    this.submitWeeklyShift(shiftData);
+                },
+
+                submitWeeklyShift() {
+                    const weekStartDate = this.weekdays[0].displayDate;  // 週の初日とする
+
+                    const shiftData = this.weekdays.map(day => ({
+                        name: day.name,
+                        date: day.displayDate,
+                        start_time: day.start_time,
+                        end_time: day.end_time,
+                        unavailable: day.unavailable,
+                    }));
+
+                    fetch("/lineShift/liff/submit_weekly_shift/", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": this.getCsrfToken(),
+                        },
+                        body: JSON.stringify({
+                            line_user_id: this.userId,
+                            week_start_date: weekStartDate,
+                            shift_data: shiftData,
+                        }),
+                    })
+                        .then(response => {
+                            if (response.ok) {
+                                alert("週のシフトが保存されました！");
+                            } else {
+                                alert("保存に失敗しました。もう一度お試しください。");
+                            }
+                        });
+                },
+                getCsrfToken() {
+                    const cookie = document.cookie.split("; ").find(row => row.startsWith("csrftoken="));
+                    return cookie ? cookie.split("=")[1] : "";
+                }
+
+            }
+        });
+    </script>
+</body>
+
+</html>

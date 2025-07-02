@@ -1,0 +1,22 @@
+<html>
+<h2>{{ week_start|date:"Y年m月d日" }}週のシフト提出状況</h2>
+<table border="1" cellpadding="8">
+    <tr>
+        <th>ユーザーID</th>
+        <th>提出状況</th>
+    </tr>
+    {% for user in status_list %}
+    <tr>
+        <td>{{ user.line_user_id }}</td>
+        <td>
+            {% if user.submitted %}
+            ✅ 提出済み
+            {% else %}
+            ❌ 未提出
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+</html>

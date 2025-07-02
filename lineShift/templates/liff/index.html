@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>契約シフト入力</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        /* ベース */
+        body {
+            font-family: "Helvetica Neue", Arial, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            margin: 0;
+            padding: 0 10px 30px;
+        }
+
+        /* タイトル */
+        h2 {
+            text-align: center;
+            font-size: 26px;
+            color: #2e7d32;
+            margin: 20px 0;
+        }
+
+        /* 名前入力欄 */
+        input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 5px;
+            margin-bottom: 20px;
+        }
+
+        /* 曜日ごとのカード */
+        .weekday-container {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            background-color: #ffffff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        /* 曜日タイトル */
+        .weekday-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            color: #2e7d32;
+        }
+
+        /* ラベルとチェックボックス */
+        label {
+            font-size: 15px;
+            margin-right: 10px;
+        }
+
+        /* 勤務不可メッセージ */
+        .unavailable-text {
+            color: #d32f2f;
+            font-weight: bold;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        /* カスタムドロップダウン */
+        .dropdown {
+            position: relative;
+            width: 100%;
+            margin-right: 10px;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+
+        .dropdown-label {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background-color: #fff;
+            cursor: pointer;
+            font-size: 15px;
+            color: #444;
+            text-align: center;
+            transition: border 0.2s;
+        }
+
+        .dropdown-label:hover {
+            border-color: #66bb6a;
+        }
+
+        .dropdown-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 160px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background-color: #fff;
+            z-index: 1000;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .dropdown-list div {
+            padding: 10px;
+            cursor: pointer;
+            font-size: 15px;
+            transition: background-color 0.2s;
+        }
+
+        .dropdown-list div:hover {
+            background-color: #66bb6a;
+            color: white;
+        }
+
+        /* 送信ボタン */
+        button {
+            margin-top: 20px;
+            padding: 14px;
+            font-size: 17px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #388e3c;
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            cursor: pointer;
+            padding: 10px 0;
+        }
+
+        .checkbox-wrapper input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+
+        /* スマホ対応 */
+        @media screen and (max-width: 768px) {
+            .dropdown {
+                width: 100%;
+                margin-right: 0;
+            }
+
+            .dropdown-label {
+                font-size: 16px;
+                padding: 12px;
+            }
+
+            .weekday-container {
+                padding: 12px;
+            }
+
+            input[type="text"] {
+                font-size: 17px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <h2>勤務時間入力</h2>
+        <div style="margin-bottom: 20px;">
+            <label for="name">名前：</label>
+            <input type="text" id="name" v-model="userName" placeholder="名前を入力してください"
+                style="padding: 8px; font-size: 16px; width: 100%;" />
+        </div>
+        <form @submit.prevent="submitForm">
+            <div class="weekday-container" v-for="(day, index) in weekdays" :key="index">
+                <div class="weekday-name" v-text="day.name"></div> <!-- ← ここが追加箇所 -->
+                <label>
+                    <input type="checkbox" v-model="day.unavailable" /> 出勤不可
+                </label>
+                <div v-if="!day.unavailable" class="time-inputs">
+                    <label>開始時間:</label>
+                    <custom-dropdown :options="timeOptions" v-model="day.start_time" placeholder="選択"></custom-dropdown>
+                    <label>終了時間:</label>
+                    <custom-dropdown :options="timeOptions" v-model="day.end_time" placeholder="選択"></custom-dropdown>
+                </div>
+                <div v-else class="unavailable-text">この日は勤務できません</div>
+            </div>
+            <button type="submit">保存</button>
+        </form>
+    </div>
+    <script>
+
+        // 外部クリックで閉じるカスタムディレクティブ
+        Vue.directive('click-outside', {
+            bind(el, binding, vnode) {
+                el.clickOutsideEvent = function (event) {
+                    if (!(el == event.target || el.contains(event.target))) {
+                        vnode.context[binding.expression](event);
+                    }
+                };
+                document.body.addEventListener('click', el.clickOutsideEvent);
+            },
+            unbind(el) {
+                document.body.removeEventListener('click', el.clickOutsideEvent);
+            },
+        });
+        Vue.component("custom-dropdown", {
+            props: ["options", "value", "placeholder"],
+            data() {
+                return {
+                    open: false,
+                    selected: this.value || "",
+                };
+            },
+            watch: {
+                value(val) {
+                    this.selected = val;
+                },
+                selected(val) {
+                    this.$emit("input", val);
+                },
+            },
+            methods: {
+                toggle() {
+                    this.open = !this.open;
+                },
+                select(option) {
+                    this.selected = option;
+                    this.open = false;
+                },
+                close() {
+                    this.open = false;
+                },
+            },
+            template: `
+  {% verbatim %}
+  <div class="dropdown" v-click-outside="close" tabindex="0" @blur="close">
+    <div class="dropdown-label" @click="toggle">
+      {{ selected || placeholder }}
+    </div>
+    <div v-if="open" class="dropdown-list">
+      <div v-for="option in options" :key="option" @click="select(option)">
+        {{ option }}
+      </div>
+    </div>
+  </div>
+  {% endverbatim %}
+`,
+        });
+        const app = new Vue({
+            el: "#app",
+            data: {
+                weekdays: [
+                    { name: "月曜日", start_time: "", end_time: "", unavailable: false },
+                    { name: "火曜日", start_time: "", end_time: "", unavailable: false },
+                    { name: "水曜日", start_time: "", end_time: "", unavailable: false },
+                    { name: "木曜日", start_time: "", end_time: "", unavailable: false },
+                    { name: "金曜日", start_time: "", end_time: "", unavailable: false },
+                    { name: "土曜日", start_time: "", end_time: "", unavailable: false },
+                    { name: "日曜日", start_time: "", end_time: "", unavailable: false },
+                ],
+                timeOptions: [],
+                userId: "",
+                userName: "",
+                openingTime: "09:00",
+                closingTime: "21:00",
+                shiftUnit: 30,
+            },
+            mounted() {
+                fetch("/lineShift/liff/config/")
+                    .then(res => res.json())
+                    .then(config => {
+                        this.openingTime = config.opening_time;  // 例: "09:00"
+                        this.closingTime = config.closing_time;  // 例: "21:00"
+                        this.shiftUnit = config.shift_unit;      // 例: 30 または 60
+                        this.generateTimeOptions();              // ← 設定後に呼ぶ
+
+                        // LIFF認証
+                        return liff.init({ liffId: "2007279050-7DXAMK3D" });
+                    })
+                    .then(() => {
+                        if (!liff.isLoggedIn()) {
+                            liff.login();
+                        } else {
+                            return liff.getProfile();
+                        }
+                    })
+                    .then(profile => {
+                        if (profile) {
+                            this.userId = profile.userId;
+                            this.userName = profile.displayName;
+                        }
+                    })
+                    .catch(err => {
+                        console.error("初期化エラー:", err);
+                    });
+            },
+            methods: {
+                generateTimeOptions() {
+                    const options = [];
+
+                    const [startHour, startMin] = this.openingTime.split(':').map(Number);
+                    const [endHour, endMin] = this.closingTime.split(':').map(Number);
+
+                    let startMinutes = startHour * 60 + startMin;
+                    const endMinutes = endHour * 60 + endMin;
+
+                    while (startMinutes <= endMinutes) {
+                        const h = Math.floor(startMinutes / 60).toString().padStart(2, '0');
+                        const m = (startMinutes % 60).toString().padStart(2, '0');
+                        options.push(`${h}:${m}`);
+                        startMinutes += this.shiftUnit;
+                    }
+
+                    this.timeOptions = options;
+                }
+                ,
+                submitForm() {
+                    for (let day of this.weekdays) {
+                        if (!day.unavailable) {
+                            if (!day.start_time || !day.end_time) {
+                                alert(`${day.name}の勤務時間を入力してください`);
+                                return;
+                            }
+
+                            const start = parseInt(day.start_time.replace(':', ''), 10);
+                            const end = parseInt(day.end_time.replace(':', ''), 10);
+                            if (start >= end) {
+                                alert(`${day.name}の終了時刻は開始時刻より後にしてください`);
+                                return;
+                            }
+                        }
+                    }
+                    fetch("/lineShift/liff/submit_shift/", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            line_user_id: this.userId,
+                            name: this.userName,
+                            shifts: this.weekdays
+                        })
+                    }).then(response => {
+                        if (response.ok) {
+                            alert("保存完了！");
+                            liff.closeWindow();
+                        } else {
+                            alert("保存に失敗しました");
+                        }
+                    });
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

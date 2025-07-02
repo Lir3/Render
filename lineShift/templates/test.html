@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>勤務シフト登録</title>
+    <style>
+        /* 省略: ここに元のCSSを入れてください */
+    </style>
+</head>
+
+<body>
+    <div id="app" class="app-container">
+        <h1>勤務シフト登録</h1>
+        <form @submit.prevent="submitShift">
+            <div class="weekday-container" v-for="(day, index) in weekdays" :key="index">
+                <div class="weekday-name" v-text="day.name"></div>
+                <label class="checkbox-wrapper">
+                    <input type="checkbox" v-model="day.unavailable" />
+                    出勤不可
+                </label>
+                <div v-if="!day.unavailable" class="time-inputs">
+                    <label>開始時間:</label>
+                    <custom-dropdown :options="timeOptions" v-model="day.start_time" placeholder="選択" :day-index="index"
+                        dropdown-type="start-time"></custom-dropdown>
+                    <label>終了時間:</label>
+                    <custom-dropdown :options="timeOptions" v-model="day.end_time" placeholder="選択" :day-index="index"
+                        dropdown-type="end-time"></custom-dropdown>
+                </div>
+                <div v-else class="unavailable-text">この日は勤務できません</div>
+            </div>
+            <button type="submit">保存</button>
+        </form>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+
+        const customDropdown = {
+            template: `
+        <div
+          class="dropdown"
+          v-click-outside="close"
+          tabindex="0"
+          @blur="close"
+          :data-day-index="dayIndex"
+          :data-type="dropdownType"
+        >
+          <div class="dropdown-label" @click="toggle">
+            {{ selectedLabel }}
+            <span class="arrow" :class="{open: open}"></span>
+          </div>
+          <transition name="fade">
+            <div v-if="open" class="dropdown-list">
+              <div
+                v-for="(option, idx) in options"
+                :key="idx"
+                class="dropdown-item"
+                :class="{selected: option === value}"
+                @click="select(option)"
+              >{{ option }}</div>
+            </div>
+          </transition>
+        </div>
+      `,
+            props: ["options", "value", "placeholder", "dayIndex", "dropdownType"],
+            data() {
+                return {
+                    open: false,
+                };
+            },
+            computed: {
+                selectedLabel() {
+                    return this.value || this.placeholder || "選択";
+                },
+            },
+            methods: {
+                toggle() {
+                    this.open = !this.open;
+                },
+                close() {
+                    this.open = false;
+                },
+                select(option) {
+                    this.$emit("update:modelValue" in this.$attrs ? "modelValue" : "value", option);
+                    this.open = false;
+                },
+            },
+            directives: {
+                clickOutside: {
+                    beforeMount(el, binding) {
+                        el.clickOutsideEvent = function (event) {
+                            if (!(el === event.target || el.contains(event.target))) {
+                                binding.value(event);
+                            }
+                        };
+                        document.body.addEventListener("click", el.clickOutsideEvent);
+                    },
+                    unmounted(el) {
+                        document.body.removeEventListener("click", el.clickOutsideEvent);
+                    },
+                },
+            },
+        };
+
+        createApp({
+            components: {
+                "custom-dropdown": customDropdown,
+            },
+            setup() {
+                const weekdays = ref([
+                    { name: "月曜日", unavailable: false, start_time: "", end_time: "" },
+                    { name: "火曜日", unavailable: false, start_time: "", end_time: "" },
+                    { name: "水曜日", unavailable: false, start_time: "", end_time: "" },
+                    { name: "木曜日", unavailable: false, start_time: "", end_time: "" },
+                    { name: "金曜日", unavailable: false, start_time: "", end_time: "" },
+                    { name: "土曜日", unavailable: false, start_time: "", end_time: "" },
+                    { name: "日曜日", unavailable: false, start_time: "", end_time: "" },
+                ]);
+
+                const timeOptions = [];
+                for (let h = 0; h < 24; h++) {
+                    const hh = String(h).padStart(2, "0");
+                    timeOptions.push(hh + ":00");
+                    timeOptions.push(hh + ":30");
+                }
+
+                const submitShift = () => {
+                    alert("送信します\n" + JSON.stringify(weekdays.value, null, 2));
+                };
+
+                return {
+                    weekdays,
+                    timeOptions,
+                    submitShift,
+                };
+            },
+        }).mount("#app");
+    </script>
+</body>
+
+</html>
