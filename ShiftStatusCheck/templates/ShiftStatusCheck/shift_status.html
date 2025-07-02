@@ -1,0 +1,132 @@
+{% load custom_filters %}
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #fff;
+        flex-direction: column;
+        height: 100vh;
+        margin: 2em;
+    }
+
+    h1 {
+        font-size: 24px;
+        line-height: 1;
+        padding: 16px;
+        border-left: 4px solid darkblue;
+        margin-bottom: 2em;
+    }
+
+    table {
+        display: inline-block;
+        border-collapse: collapse;
+        padding: 0;
+        width: auto;
+        table-layout: fixed;
+    }
+
+    table tr {
+        background-color: #fff;
+        border: 1px solid #bbb;
+        padding: .35em;
+    }
+
+    table th,
+    table td {
+        padding: 1em 10px 1em 1em;
+        border-right: 1px solid #bbb;
+    }
+
+    table th {
+        font-size: .85em;
+    }
+
+    table thead tr {
+        background-color: #eee;
+    }
+
+    .txt {
+        text-align: left;
+        font-size: .85em;
+    }
+
+    .price {
+        text-align: right;
+    }
+
+    @media screen and (max-width: 600px) {
+        table {
+            border: 0;
+            width: 100%
+        }
+
+        table th {
+            background-color: #eee;
+            display: block;
+            border-right: none;
+        }
+
+        table thead {
+            border: none;
+            clip: rect(0 0 0 0);
+            height: 1px;
+            margin: -1px;
+            overflow: hidden;
+            padding: 0;
+            position: absolute;
+            width: 1px;
+        }
+
+        table tr {
+            display: block;
+            margin-bottom: .625em;
+        }
+
+        table td {
+            border-bottom: 1px solid #bbb;
+            display: block;
+            font-size: .8em;
+            text-align: right;
+            position: relative;
+            padding: .625em .625em .625em 4em;
+            border-right: none;
+        }
+
+        table td::before {
+            content: attr(data-label);
+            font-weight: bold;
+            position: absolute;
+            left: 10px;
+        }
+
+        table td:last-child {
+            border-bottom: 0;
+        }
+    }
+</style>
+<h1>シフト提出状況一覧</h1>
+<table border="1">
+    <thead>
+        <tr>
+            <th>ユーザー名</th>
+            <th>週の開始日</th>
+            <th>提出日時</th>
+            <th>提出状況</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for entry in status_list %}
+        <tr>
+            <td>{{ entry.name }}</td>
+            <td>{{ entry.week_start_date }}</td>
+            <td>
+                {% if entry.submitted_at %}
+                {{ entry.submitted_at|date:"Y年m月d日 H:i" }}
+                {% else %}
+                -
+                {% endif %}
+            </td>
+            <td>{{ entry.status }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

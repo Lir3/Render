@@ -1,0 +1,93 @@
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #fff;
+        flex-direction: column;
+        height: 100vh;
+        margin: 2em;
+    }
+
+    h1 {
+        font-size: 24px;
+        line-height: 1;
+        padding: 16px;
+        border-left: 4px solid darkblue;
+        margin-bottom: 2em;
+    }
+
+    select.form-control,
+    input.form-control {
+        padding: 8px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        font-size: 14px;
+        width: 200px;
+    }
+
+    label {
+        font-weight: bold;
+        margin-top: 1em;
+    }
+
+    button.btn {
+        margin-top: 2em;
+    }
+</style>
+<h1>シフト設定</h1>
+<form method="post">
+    {% csrf_token %}
+
+    <div>
+        <label>営業開始時間:　　　　　</label>
+        {{ form.opening_time }}
+        <span class="text-muted">（現在: {{ form.initial.opening_time }}）</span>
+    </div>
+
+    <div>
+        <label>営業終了時間:　　　　　</label>
+        {{ form.closing_time }}
+        <span class="text-muted">（現在: {{ form.initial.closing_time }}）</span>
+    </div>
+
+    <div>
+        <label>アイドルタイム開始:　　</label>
+        {{ form.idle_start }}
+        <span class="text-muted">（現在: {{ form.initial.idle_start }}）</span>
+    </div>
+
+    <div>
+        <label>アイドルタイム終了:　　</label>
+        {{ form.idle_end }}
+        <span class="text-muted">（現在: {{ form.initial.idle_end }}）</span>
+    </div>
+
+    <div>
+        <label>平日：最小必要人数:　　</label>
+        {{ form.weekday_min_staff }}
+    </div>
+
+    <div>
+        <label>平日：最大同時人数:　　</label>
+        {{ form.weekday_max_staff }}
+    </div>
+    <div>
+        <label>休日：最小必要人数:　　</label>
+        {{ form.weekend_min_staff }}
+    </div>
+    <div>
+        <label>休日：最大同時人数:　　</label>
+        {{ form.weekend_max_staff }}
+    </div>
+
+    <div>
+        <label>シフト時間の最小単位:　</label>
+        {{ form.shift_unit }}
+    </div>
+
+    <div>
+        <label>定休日:</label>
+        {{ form.closed_days }}
+    </div>
+
+    <button type="submit" class="btn btn-primary">変更を保存する</button>
+</form>
