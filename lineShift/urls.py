@@ -12,7 +12,7 @@ urlpatterns = [
     path('weekly_shift/', views.weekly_shift_page, name='weekly_shift_page'),
 
     # データ取得系
-    path('liff/get_contract_shift/', views.get_contract_shift, name='get_contract_shift'),
+    path('liff/get_contract_shift/<str:line_user_id>/', views.get_contract_shift, name='get_contract_shift'),
     path('liff/get_last_shift/', views.get_last_shift, name='get_last_shift'),
     path('liff/get_previous_week_shift/', views.get_previous_week_shift, name='get_previous_week_shift'),
     path('liff/config/', views.get_shift_config, name='get_shift_config'),
