@@ -161,7 +161,7 @@ def weekly_shift_page(request):
     return render(request, 'liff/weekly_shift.html')
 
 def test(request):
-    return render(request, 'test.html')
+    return render(request, 'liff/test.html')
 
 @csrf_exempt
 def callback(request):

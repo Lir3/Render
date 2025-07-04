@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>契約シフト登録</title>
+    <script src="https://static.line-scdn.net/liff/edge/2.1/sdk.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th,
+        td {
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+
+        select,
+        input[type="text"] {
+            width: 90%;
+        }
+
+        .submit-button {
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>契約シフト登録</h2>
+
+    <label for="name">名前：</label>
+    <input type="text" id="name" required><br>
+
+    <table>
+        <thead>
+            <tr>
+                <th>曜日</th>
+                <th>開始時間</th>
+                <th>終了時間</th>
+                <th>出勤不可</th>
+            </tr>
+        </thead>
+        <tbody id="shiftTableBody">
+            <!-- JSで動的に挿入 -->
+        </tbody>
+    </table>
+
+    <button class="submit-button" onclick="submitShift()">送信</button>
+
+    <script>
+        let lineUserId = null;
+
+        async function loadShiftConfig() {
+            const res = await fetch("/get_shift_config");
+            const data = await res.json();
+
+            if (!data.opening_time || !data.closing_time || !data.shift_unit) {
+                alert("シフト設定が存在しません。管理者に連絡してください。");
+                return;
+            }
+
+            const start = data.opening_time;
+            const end = data.closing_time;
+            const unit = parseInt(data.shift_unit);
+            const timeOptions = generateTimeList(start, end, unit);
+
+            const days = ['月', '火', '水', '木', '金', '土', '日'];
+            const tbody = document.getElementById("shiftTableBody");
+
+            for (const day of days) {
+                const tr = document.createElement("tr");
+
+                const tdDay = document.createElement("td");
+                tdDay.textContent = day;
+
+                const tdStart = document.createElement("td");
+                const startSelect = document.createElement("select");
+                startSelect.id = `${day}_start`;
+
+                const tdEnd = document.createElement("td");
+                const endSelect = document.createElement("select");
+                endSelect.id = `${day}_end`;
+
+                for (const t of timeOptions) {
+                    const optStart = new Option(t, t);
+                    const optEnd = new Option(t, t);
+                    startSelect.appendChild(optStart);
+                    endSelect.appendChild(optEnd);
+                }
+
+                const tdUnavailable = document.createElement("td");
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.id = `${day}_unavailable`;
+                tdUnavailable.appendChild(checkbox);
+
+                tdStart.appendChild(startSelect);
+                tdEnd.appendChild(endSelect);
+
+                tr.appendChild(tdDay);
+                tr.appendChild(tdStart);
+                tr.appendChild(tdEnd);
+                tr.appendChild(tdUnavailable);
+
+                tbody.appendChild(tr);
+            }
+        }
+
+        function generateTimeList(start, end, unitMinutes) {
+            const result = [];
+            let [sh, sm] = start.split(":").map(Number);
+            let [eh, em] = end.split(":").map(Number);
+            const startTime = sh * 60 + sm;
+            const endTime = eh * 60 + em;
+
+            for (let t = startTime; t <= endTime; t += unitMinutes) {
+                const h = Math.floor(t / 60).toString().padStart(2, "0");
+                const m = (t % 60).toString().padStart(2, "0");
+                result.push(`${h}:${m}`);
+            }
+
+            return result;
+        }
+
+        async function submitShift() {
+            const name = document.getElementById("name").value;
+            if (!name || !lineUserId) {
+                alert("名前とLINEログインが必要です。");
+                return;
+            }
+
+            const days = ['月', '火', '水', '木', '金', '土', '日'];
+            const shifts = days.map(day => ({
+                name: day,
+                start_time: document.getElementById(`${day}_start`).value,
+                end_time: document.getElementById(`${day}_end`).value,
+                unavailable: document.getElementById(`${day}_unavailable`).checked
+            }));
+
+            const postData = {
+                line_user_id: lineUserId,
+                name: name,
+                shifts: shifts
+            };
+
+            const response = await fetch("/submit_shift", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(postData)
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                alert("シフトを保存しました。");
+                liff.closeWindow();
+            } else {
+                alert("保存に失敗：" + result.error);
+            }
+        }
+
+        window.onload = async function () {
+            try {
+                await liff.init({ liffId: "2007279050-7DXAMK3D" });
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                } else {
+                    const profile = await liff.getProfile();
+                    lineUserId = profile.userId;
+                    await loadShiftConfig();
+                }
+            } catch (err) {
+                console.error("LIFFエラー:", err);
+                alert("LIFFの初期化に失敗しました");
+            }
+        };
+    </script>
+</body>
+
+</html>
