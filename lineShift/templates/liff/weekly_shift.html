@@ -429,14 +429,14 @@
                     this.timeOptions = options;
                 },
                 fetchContractShifts() {
-                    fetch(`/lineShift/get_contract_shift/${this.userId}/`)
+                    fetch(`/lineShift/liff/get_contract_shift/${this.userId}/`)
                         .then(res => res.json())
                         .then(data => {
                             this.contractShifts = data;
                         });
                 },
                 fetchPreviousShifts() {
-                    fetch("/lineShift/get_previous_week_shift/", {
+                    fetch("/lineShift/liff/get_previous_week_shift/", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
