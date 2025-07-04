@@ -429,7 +429,7 @@
                     this.timeOptions = options;
                 },
                 fetchContractShifts() {
-                    fetch(`/lineShift/liff/get_contract_shift/${this.userId}/`)
+                    fetch(`/lineShift/liff/get_contract_shift/<str:line_user_id>/`)
                         .then(res => res.json())
                         .then(data => {
                             this.contractShifts = data;
