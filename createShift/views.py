@@ -26,10 +26,21 @@ def generate_and_edit(request):
 
         print(f"WeeklyShift 件数: {weekly_shifts.count()}")
 
+        # 曜日 → 日数マップ
+        weekday_map = {
+            '月曜日': 0,
+            '火曜日': 1,
+            '水曜日': 2,
+            '木曜日': 3,
+            '金曜日': 4,
+            '土曜日': 5,
+            '日曜日': 6
+        }
+
         for weekly in weekly_shifts:
             print(f"User: {weekly.line_user_id}, ShiftData: {weekly.shift_data}")
 
-            # CustomUser → Staff の関連
+            # CustomUser → Staff の紐付け
             custom_user = CustomUser.objects.filter(line_user_id=weekly.line_user_id).first()
             if not custom_user:
                 print(f"CustomUser が見つかりません: {weekly.line_user_id}")
@@ -46,64 +57,88 @@ def generate_and_edit(request):
                 )
                 print(f"Staff を自動作成: {staff.name}")
 
-            for day_data in weekly.shift_data:
-                if day_data.get("unavailable"):
-                    continue
+            shift_data_list = weekly.shift_data
 
-                date_str = day_data.get("date")
-                start_str = day_data.get("start_time")
-                end_str = day_data.get("end_time")
+            if isinstance(shift_data_list, dict):
+                # 曜日形式 {'月曜日': {...}, ...}
+                for day_name, day_data in shift_data_list.items():
+                    if day_data.get("unavailable"):
+                        continue
 
-                if not (date_str and start_str and end_str):
-                    continue
+                    start_str = day_data.get("start")
+                    end_str = day_data.get("end")
+                    if not (start_str and end_str):
+                        continue
 
-                try:
-                    shift_date = datetime.strptime(f"{today.year}/{date_str}", "%Y/%m/%d").date()
-                    start_time = datetime.strptime(start_str, "%H:%M").time()
-                    end_time = datetime.strptime(end_str, "%H:%M").time()
-                except ValueError as e:
-                    print(f"日付変換エラー: {e}")
-                    continue
+                    try:
+                        shift_date = start_of_week + timedelta(days=weekday_map.get(day_name, 0))
+                        start_time = datetime.strptime(start_str, "%H:%M").time()
+                        end_time = datetime.strptime(end_str, "%H:%M").time()
+                    except Exception as e:
+                        print(f"エラー（日付変換）: {e}")
+                        continue
 
-                # 希望者数を数えて required_staff を動的に設定
-                existing_pref_count = ShiftPreference.objects.filter(
-                    Q(shift__week=week) &
-                    Q(date=shift_date) &
-                    Q(start_time=start_time) &
-                    Q(end_time=end_time)
-                ).count()
+                    _create_shift_and_preference(week, staff, shift_date, start_time, end_time)
 
-                required_staff = max(existing_pref_count + 1, 1)  # 自分含む
+            elif isinstance(shift_data_list, list):
+                # 日付形式 [{'date': '07/07', 'start_time': '00:00', ...}]
+                for day_data in shift_data_list:
+                    if day_data.get("unavailable"):
+                        continue
 
-                # Shift 作成または取得
-                shift, created = Shift.objects.get_or_create(
-                    week=week,
-                    date=shift_date,
-                    start_time=start_time,
-                    end_time=end_time,
-                    defaults={"required_staff": required_staff}
-                )
+                    date_str = day_data.get("date")
+                    start_str = day_data.get("start_time")
+                    end_str = day_data.get("end_time")
 
-                if created:
-                    print(f"Shift 作成: {shift.date} {shift.start_time}-{shift.end_time}, required: {required_staff}")
+                    if not (date_str and start_str and end_str):
+                        continue
 
-                # ShiftPreference 登録
-                ShiftPreference.objects.get_or_create(
-                    staff=staff,
-                    shift=shift,
-                    defaults={
-                        "date": shift_date,
-                        "start_time": start_time,
-                        "end_time": end_time
-                    }
-                )
+                    try:
+                        shift_date = datetime.strptime(f"{today.year}/{date_str}", "%Y/%m/%d").date()
+                        start_time = datetime.strptime(start_str, "%H:%M").time()
+                        end_time = datetime.strptime(end_str, "%H:%M").time()
+                    except ValueError as e:
+                        print(f"エラー（日付変換）: {e}")
+                        continue
 
-        # 自動割当
+                    _create_shift_and_preference(week, staff, shift_date, start_time, end_time)
+
+        # 割り当て処理実行
         assign_shifts_for_week(week.id)
-
         return redirect('shift_list')
 
     return render(request, 'dashboard.html')
+
+def _create_shift_and_preference(week, staff, shift_date, start_time, end_time):
+    existing_pref_count = ShiftPreference.objects.filter(
+        Q(shift__week=week) &
+        Q(date=shift_date) &
+        Q(start_time=start_time) &
+        Q(end_time=end_time)
+    ).count()
+
+    required_staff = max(existing_pref_count + 1, 1)
+
+    shift, created = Shift.objects.get_or_create(
+        week=week,
+        date=shift_date,
+        start_time=start_time,
+        end_time=end_time,
+        defaults={"required_staff": required_staff}
+    )
+
+    if created:
+        print(f"Shift 作成: {shift.date} {shift.start_time}-{shift.end_time}, required: {required_staff}")
+
+    ShiftPreference.objects.get_or_create(
+        staff=staff,
+        shift=shift,
+        defaults={
+            "date": shift_date,
+            "start_time": start_time,
+            "end_time": end_time
+        }
+    )
 
 
 @csrf_protect
