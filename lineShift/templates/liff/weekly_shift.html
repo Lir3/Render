@@ -432,8 +432,10 @@
                     fetch(`/lineShift/liff/get_contract_shift/${this.userId}/`)
                         .then(res => res.json())
                         .then(data => {
-                            this.contractShifts = data;
+                            console.log("契約シフト取得:", data);
+                            this.contractShifts = data.shifts || [];
                         })
+
                         .catch(err => {
                             console.error("契約シフト取得失敗:", err);
                         });
