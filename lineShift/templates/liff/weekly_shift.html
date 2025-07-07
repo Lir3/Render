@@ -221,9 +221,30 @@
             }
 
             .time-inputs {
-                flex-direction: column;
-                align-items: flex-start;
+                flex-direction: row;
+                /* ← column を row に */
+                align-items: center;
                 gap: 6px;
+                flex-wrap: nowrap;
+                /* 横スクロール防止のため必要に応じて */
+            }
+
+            .time-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .time-label {
+                font-size: 15px;
+                font-weight: 500;
+                color: #333;
+                text-align: center;
+            }
+
+            .tilde {
+                font-size: 18px;
+                color: #555;
             }
 
             button[type="submit"] {
@@ -255,19 +276,28 @@
             <div class="weekday-container" v-for="(day, index) in weekdays" :key="index">
                 <div class="weekday-name">
                     <div>{{ displayDates[index] }}（{{ day.name.slice(0, 1) }}）</div>
-                    <button type="button" @click="resetDay(index)">
-                        この日をリセット
-                    </button>
                 </div>
                 <label>
                     <input type="checkbox" v-model="day.unavailable" /> 出勤不可
+                    <input type="checkbox" v-model="day.unavailable" /> 有給希望　
+                    <button type="button" @click="resetDay(index)">
+                        この日をリセット
+                    </button>
                 </label>
                 <div v-if="!day.unavailable" class="time-inputs">
-                    <label>開始</label>
-                    <custom-dropdown :options="timeOptions" v-model="day.start_time" placeholder="選択"></custom-dropdown>
-                    <label>終了</label>
-                    <custom-dropdown :options="timeOptions" v-model="day.end_time" placeholder="選択"></custom-dropdown>
+                    <div class="time-row">
+                        <div class="time-label">希望時間</div>
+                    </div>
+                    <div class="time-row">
+                        <custom-dropdown :options="timeOptions" v-model="day.start_time"
+                            placeholder="選択"></custom-dropdown>
+                        <span class="tilde">〜　</span>
+                        <custom-dropdown :options="timeOptions" v-model="day.end_time"
+                            placeholder="選択"></custom-dropdown>
+                    </div>
                 </div>
+
+
                 <div v-else class="unavailable-text">この日は勤務できません</div>
             </div>
             <button type="submit">保存</button>
