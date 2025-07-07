@@ -254,7 +254,7 @@
         <form @submit.prevent="submitForm">
             <div class="weekday-container" v-for="(day, index) in weekdays" :key="index">
                 <div class="weekday-name">
-                    <div>{{ displayDates[index] }}</div>
+                    <div>{{ displayDates[index] }}（{{ day.name.slice(0, 1) }}）</div>
                     <button type="button" @click="resetDay(index)">
                         この日をリセット
                     </button>
