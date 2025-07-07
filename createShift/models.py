@@ -17,13 +17,16 @@ class Week(models.Model):
         return f"{self.start_date} ～ {self.end_date}"
 
 class Staff(models.Model):
+    line_user_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
     name = models.CharField(max_length=100)
     role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True)
     is_high_school_student = models.BooleanField(default=False)
-
     max_shifts_per_week = models.IntegerField(default=5)
     max_hours_per_day = models.DecimalField(default=8.0, max_digits=4, decimal_places=2)
-    work_end_limit = models.TimeField(null=True, blank=True)  # 例: 21:00（高校生）
+    work_end_limit = models.TimeField(null=True, blank=True)
+
+    def __str__(self):
+        return self.name
 
 class Shift(models.Model):
     week = models.ForeignKey(Week, on_delete=models.CASCADE)
