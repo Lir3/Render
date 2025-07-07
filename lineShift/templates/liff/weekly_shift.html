@@ -432,13 +432,16 @@
                     fetch(`/lineShift/liff/get_contract_shift/${this.userId}/`)
                         .then(res => res.json())
                         .then(data => {
-                            console.log("契約シフトAPI応答:", data);  // ←ここを追加
-                            this.contractShifts = data.shifts || {};
+                            console.log("契約シフトAPI応答:", data);
+
+                            // Vueのリアクティブオブジェクトではなく普通のオブジェクトに変換する
+                            this.contractShifts = JSON.parse(JSON.stringify(data.shifts || {}));
                         })
                         .catch(err => {
                             console.error("契約シフト取得失敗:", err);
                         });
                 },
+
 
                 fetchPreviousShifts() {
                     fetch("/lineShift/liff/get_previous_week_shift/", {
@@ -456,13 +459,15 @@
                 },
                 applyContractShift() {
                     console.log("契約シフト反映ボタン押された");
-                    this.weekdays.forEach((day) => {
-                        if (this.contractShifts[day.name]) {
-                            Object.assign(day, this.contractShifts[day.name]);
+                    this.weekdays.forEach(day => {
+                        const shiftData = this.contractShifts[day.name];
+                        if (shiftData) {
+                            day.start_time = shiftData.start_time || "";
+                            day.end_time = shiftData.end_time || "";
+                            day.unavailable = shiftData.unavailable || false;
                         }
                     });
-                }
-                ,
+                },
                 applyPreviousWeek() {
                     this.weekdays.forEach((day, index) => {
                         Object.assign(day, this.previousShifts[index] || {});
