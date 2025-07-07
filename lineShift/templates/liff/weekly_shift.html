@@ -432,14 +432,14 @@
                     fetch(`/lineShift/liff/get_contract_shift/${this.userId}/`)
                         .then(res => res.json())
                         .then(data => {
-                            console.log("契約シフト取得:", data);
+                            console.log("契約シフトAPI応答:", data);  // ←ここを追加
                             this.contractShifts = data.shifts || {};
                         })
-
                         .catch(err => {
                             console.error("契約シフト取得失敗:", err);
                         });
                 },
+
                 fetchPreviousShifts() {
                     fetch("/lineShift/liff/get_previous_week_shift/", {
                         method: "POST",
@@ -455,6 +455,7 @@
                         });
                 },
                 applyContractShift() {
+                    console.log("契約シフト反映ボタン押された");
                     this.weekdays.forEach((day) => {
                         if (this.contractShifts[day.name]) {
                             Object.assign(day, this.contractShifts[day.name]);
