@@ -2,48 +2,55 @@ from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_protect
 from django.contrib.admin.views.decorators import staff_member_required
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q
 from datetime import date, datetime, timedelta
 from .models import ShiftPreference, Week, Staff, Shift, AssignedShift
 from .services.shift_assignment import assign_shifts_for_week
 from lineShift.models import CustomUser, WeeklyShift
+from createShift.models import Role  # 追加：デフォルトの役職を使う場合
 
 def dashboard(request):
-    return render(request, 'dashboard.html')  # テンプレートが存在することを確認！
+    return render(request, 'dashboard.html')
 
 @csrf_protect
 def generate_and_edit(request):
     print("generate_and_edit が呼び出された")
+
     if request.method == 'POST':
         today = timezone.now().date()
         start_of_week = today - timedelta(days=today.weekday())
         end_of_week = start_of_week + timedelta(days=6)
 
-        # Weekの取得 or 作成
         week, _ = Week.objects.get_or_create(start_date=start_of_week, end_date=end_of_week)
-
-        # WeeklyShift取得
         weekly_shifts = WeeklyShift.objects.filter(week_start_date=start_of_week)
 
         print(f"WeeklyShift 件数: {weekly_shifts.count()}")
+
         for weekly in weekly_shifts:
             print(f"User: {weekly.line_user_id}, ShiftData: {weekly.shift_data}")
-            # CustomUser と Staff の対応付け
+
+            # CustomUser → Staff の関連
             custom_user = CustomUser.objects.filter(line_user_id=weekly.line_user_id).first()
             if not custom_user:
                 print(f"CustomUser が見つかりません: {weekly.line_user_id}")
                 continue
+
             staff = Staff.objects.filter(line_user_id=custom_user.line_user_id).first()
             if not staff:
                 print(f"Staff が見つかりません: {custom_user.name}")
-                continue
+                default_role = Role.objects.filter(name="一般").first()
+                staff = Staff.objects.create(
+                    line_user_id=custom_user.line_user_id,
+                    name=custom_user.name,
+                    role=default_role
+                )
+                print(f"Staff を自動作成: {staff.name}")
 
             for day_data in weekly.shift_data:
-                print(f"{staff.name} の希望: {day_data}")
                 if day_data.get("unavailable"):
                     continue
 
-                date_str = day_data.get("date")  # 例: "07/07"
+                date_str = day_data.get("date")
                 start_str = day_data.get("start_time")
                 end_str = day_data.get("end_time")
 
@@ -51,32 +58,47 @@ def generate_and_edit(request):
                     continue
 
                 try:
-                    # 年を補完（今年）
                     shift_date = datetime.strptime(f"{today.year}/{date_str}", "%Y/%m/%d").date()
                     start_time = datetime.strptime(start_str, "%H:%M").time()
                     end_time = datetime.strptime(end_str, "%H:%M").time()
                 except ValueError as e:
-                    print(f"日付変換エラー: {e} → スキップされました。date={date_str}, start={start_str}, end={end_str}")
-                    continue  # 不正なフォーマットはスキップ
+                    print(f"日付変換エラー: {e}")
+                    continue
 
-                # Shiftを取得 or 作成
+                # 希望者数を数えて required_staff を動的に設定
+                existing_pref_count = ShiftPreference.objects.filter(
+                    Q(shift__week=week) &
+                    Q(date=shift_date) &
+                    Q(start_time=start_time) &
+                    Q(end_time=end_time)
+                ).count()
+
+                required_staff = max(existing_pref_count + 1, 1)  # 自分含む
+
+                # Shift 作成または取得
                 shift, created = Shift.objects.get_or_create(
                     week=week,
                     date=shift_date,
                     start_time=start_time,
-                    end_time=end_time
+                    end_time=end_time,
+                    defaults={"required_staff": required_staff}
                 )
+
                 if created:
-                    print(f"Shift 作成: {shift.date} {shift.start_time}-{shift.end_time}")
+                    print(f"Shift 作成: {shift.date} {shift.start_time}-{shift.end_time}, required: {required_staff}")
 
-
-                # ShiftPreferenceも保存（希望として）
+                # ShiftPreference 登録
                 ShiftPreference.objects.get_or_create(
                     staff=staff,
-                    shift=shift
+                    shift=shift,
+                    defaults={
+                        "date": shift_date,
+                        "start_time": start_time,
+                        "end_time": end_time
+                    }
                 )
 
-        # 自動割り当て
+        # 自動割当
         assign_shifts_for_week(week.id)
 
         return redirect('shift_list')
@@ -90,13 +112,11 @@ def shift_list(request):
     week_start = today - timedelta(days=today.weekday())
     week_end = week_start + timedelta(days=6)
 
-    # 同じ週が複数ある場合に備えて1件目だけを取得
     week = Week.objects.filter(start_date=week_start, end_date=week_end).first()
-
     if not week:
         week = Week.objects.create(start_date=week_start, end_date=week_end)
 
-    # 自動割り当て（必要なら）
+    # 必要なら再割当
     if not AssignedShift.objects.filter(shift__week=week).exists():
         assign_shifts_for_week(week.id)
 
@@ -114,14 +134,17 @@ def shift_list(request):
         'staff_list': staff_list,
     })
 
+
 def view_submissions(request):
-    # 希望提出の一覧取得ロジックを書く
     return render(request, 'view_submissions.html')
+
+
+from django.contrib.admin.views.decorators import staff_member_required
 
 @staff_member_required
 def weekly_submission_status(request):
     today = date.today()
-    week_start = today - timedelta(days=today.weekday())  # 月曜日
+    week_start = today - timedelta(days=today.weekday())
 
     all_users = WeeklyShift.objects.values_list('line_user_id', flat=True).distinct()
     submitted_users = WeeklyShift.objects.filter(week_start_date=week_start).values_list('line_user_id', flat=True)
