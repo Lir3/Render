@@ -127,8 +127,7 @@ def get_previous_week_shift(request):
     return JsonResponse({"error": "無効なHTTPメソッドです"}, status=405)
 
 
-def get_contract_shift(request):
-    line_user_id = request.GET.get('line_user_id')
+def get_contract_shift(request, line_user_id):  # ← ここで受け取る
     if not line_user_id:
         return JsonResponse({"error": "line_user_id is required"}, status=400)
 
@@ -137,6 +136,7 @@ def get_contract_shift(request):
         return JsonResponse({"shifts": contract_shift.shift_data})
     except ContractShift.DoesNotExist:
         return JsonResponse({"shifts": []})
+
 
 
 def get_last_shift(request):
