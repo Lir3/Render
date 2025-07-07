@@ -382,7 +382,7 @@
                         this.shiftUnit = config.shift_unit;
                         this.generateTimeOptions();
 
-                        // LIFF初期化（LIFF IDはご自身のものに変更必須）
+                        // LIFF初期化
                         return liff.init({ liffId: "2007279050-gEq82Ame" });
                     })
                     .then(() => {
@@ -429,10 +429,13 @@
                     this.timeOptions = options;
                 },
                 fetchContractShifts() {
-                    fetch(`/lineShift/liff/get_contract_shift/${line_user_id}/`)
+                    fetch(`/lineShift/liff/get_contract_shift/${this.userId}/`)
                         .then(res => res.json())
                         .then(data => {
                             this.contractShifts = data;
+                        })
+                        .catch(err => {
+                            console.error("契約シフト取得失敗:", err);
                         });
                 },
                 fetchPreviousShifts() {
