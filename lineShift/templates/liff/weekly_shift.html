@@ -462,8 +462,8 @@
                     this.weekdays.forEach(day => {
                         const shiftData = this.contractShifts[day.name];
                         if (shiftData) {
-                            day.start_time = shiftData.start_time || "";
-                            day.end_time = shiftData.end_time || "";
+                            day.start_time = shiftData.start || "";
+                            day.end_time = shiftData.end || "";
                             day.unavailable = shiftData.unavailable || false;
                         }
                     });
