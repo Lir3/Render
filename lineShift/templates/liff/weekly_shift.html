@@ -432,8 +432,6 @@
                     fetch(`/lineShift/liff/get_contract_shift/${this.userId}/`)
                         .then(res => res.json())
                         .then(data => {
-                            console.log("契約シフトAPI応答:", data);
-
                             // Vueのリアクティブオブジェクトではなく普通のオブジェクトに変換する
                             this.contractShifts = JSON.parse(JSON.stringify(data.shifts || {}));
                         })
@@ -458,7 +456,6 @@
                         });
                 },
                 applyContractShift() {
-                    console.log("契約シフト反映ボタン押された");
                     this.weekdays.forEach(day => {
                         const shiftData = this.contractShifts[day.name];
                         if (shiftData) {
