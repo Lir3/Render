@@ -433,7 +433,7 @@
                         .then(res => res.json())
                         .then(data => {
                             console.log("契約シフト取得:", data);
-                            this.contractShifts = data.shifts || [];
+                            this.contractShifts = data.shifts || {};
                         })
 
                         .catch(err => {
@@ -455,10 +455,13 @@
                         });
                 },
                 applyContractShift() {
-                    this.weekdays.forEach((day, index) => {
-                        Object.assign(day, this.contractShifts[index] || {});
+                    this.weekdays.forEach((day) => {
+                        if (this.contractShifts[day.name]) {
+                            Object.assign(day, this.contractShifts[day.name]);
+                        }
                     });
-                },
+                }
+                ,
                 applyPreviousWeek() {
                     this.weekdays.forEach((day, index) => {
                         Object.assign(day, this.previousShifts[index] || {});
