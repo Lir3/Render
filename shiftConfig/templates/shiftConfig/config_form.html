@@ -1,3 +1,11 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>シフト設定</title>
+</head>
+
 <style>
     body {
         font-family: Arial, sans-serif;
@@ -15,8 +23,7 @@
         margin-bottom: 2em;
     }
 
-    select.form-control,
-    input.form-control {
+    select.form-control {
         padding: 8px;
         border-radius: 6px;
         border: 1px solid #ccc;
@@ -24,70 +31,88 @@
         width: 200px;
     }
 
+    input.form-control {
+        padding: 8px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        font-size: 14px;
+        width: 181px
+    }
+
     label {
         font-weight: bold;
         margin-top: 1em;
     }
 
-    button.btn {
-        margin-top: 2em;
+    button {
+        border: 2px solid #27acd9;
+        background: #27acd9;
+        color: #fff;
+        border-radius: 5px;
+        width: 120px;
     }
 </style>
-<h1>シフト設定</h1>
-<form method="post">
-    {% csrf_token %}
 
-    <div>
-        <label>営業開始時間:　　　　　</label>
-        {{ form.opening_time }}
-        <span class="text-muted">（現在: {{ form.initial.opening_time }}）</span>
-    </div>
+<body>
+    <h1>シフト設定</h1>
+    <form method="post">
+        {% csrf_token %}
 
-    <div>
-        <label>営業終了時間:　　　　　</label>
-        {{ form.closing_time }}
-        <span class="text-muted">（現在: {{ form.initial.closing_time }}）</span>
-    </div>
+        <div>
+            <label>営業開始時間:　　　　　</label>
+            {{ form.opening_time }}
+            <span class="text-muted">（現在: {{ form.initial.opening_time }}）</span>
+        </div>
 
-    <div>
-        <label>アイドルタイム開始:　　</label>
-        {{ form.idle_start }}
-        <span class="text-muted">（現在: {{ form.initial.idle_start }}）</span>
-    </div>
+        <div>
+            <label>営業終了時間:　　　　　</label>
+            {{ form.closing_time }}
+            <span class="text-muted">（現在: {{ form.initial.closing_time }}）</span>
+        </div>
 
-    <div>
-        <label>アイドルタイム終了:　　</label>
-        {{ form.idle_end }}
-        <span class="text-muted">（現在: {{ form.initial.idle_end }}）</span>
-    </div>
+        <div>
+            <label>アイドルタイム開始:　　</label>
+            {{ form.idle_start }}
+            <span class="text-muted">（現在: {{ form.initial.idle_start }}）</span>
+        </div>
 
-    <div>
-        <label>平日：最小必要人数:　　</label>
-        {{ form.weekday_min_staff }}
-    </div>
+        <div>
+            <label>アイドルタイム終了:　　</label>
+            {{ form.idle_end }}
+            <span class="text-muted">（現在: {{ form.initial.idle_end }}）</span>
+        </div>
 
-    <div>
-        <label>平日：最大同時人数:　　</label>
-        {{ form.weekday_max_staff }}
-    </div>
-    <div>
-        <label>休日：最小必要人数:　　</label>
-        {{ form.weekend_min_staff }}
-    </div>
-    <div>
-        <label>休日：最大同時人数:　　</label>
-        {{ form.weekend_max_staff }}
-    </div>
+        <div>
+            <label>平日：最小必要人数:　　</label>
+            {{ form.weekday_min_staff }}
+        </div>
 
-    <div>
-        <label>シフト時間の最小単位:　</label>
-        {{ form.shift_unit }}
-    </div>
+        <div>
+            <label>平日：最大同時人数:　　</label>
+            {{ form.weekday_max_staff }}
+        </div>
+        <div>
+            <label>休日：最小必要人数:　　</label>
+            {{ form.weekend_min_staff }}
+        </div>
+        <div>
+            <label>休日：最大同時人数:　　</label>
+            {{ form.weekend_max_staff }}
+        </div>
 
-    <div>
-        <label>定休日:</label>
-        {{ form.closed_days }}
-    </div>
+        <div>
+            <label>シフト時間の最小単位:　</label>
+            {{ form.shift_unit }}
+        </div>
 
-    <button type="submit" class="btn btn-primary">変更を保存する</button>
-</form>
+        <div>
+            <label>定休日:</label>
+            {{ form.closed_days }}
+        </div>
+
+        <button type="submit" class="button">変更を保存する</button>
+
+    </form>
+</body>
+
+</html>

@@ -24,6 +24,19 @@
         flex-direction: column;
     }
 
+    #overlay .close-button {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        z-index: 10000;
+    }
+
     .modal-image-wrapper {
         text-align: center;
         background: white;
@@ -103,9 +116,9 @@
 
             <!-- オーバーレイ＋画像モーダル -->
             <div id="overlay" style="display: none;">
+                <button class="close-button" onclick="hideOverlay()">×</button>
                 <div class="modal-image-wrapper">
                     <img src="/static/image.png" alt="説明画像" class="modal-image">
-                    <button class="btn btn-danger mt-3" onclick="hideOverlay()">×</button>
                 </div>
             </div>
 
