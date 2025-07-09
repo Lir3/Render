@@ -1,197 +1,27 @@
-from django.shortcuts import render, redirect
-from django.utils import timezone
-from django.views.decorators.csrf import csrf_protect
-from django.contrib.admin.views.decorators import staff_member_required
-from django.db.models import Prefetch, Q
-from datetime import date, datetime, timedelta
-from .models import ShiftPreference, Week, Staff, Shift, AssignedShift
-from .services.shift_assignment import assign_shifts_for_week
-from lineShift.models import CustomUser, WeeklyShift
-from createShift.models import Role  # 追加：デフォルトの役職を使う場合
+from django.shortcuts import render
+from datetime import time, timedelta, datetime
 
-def dashboard(request):
-    return render(request, 'dashboard.html')
+def calendar_view(request):
+    return render(request, 'CreateShift/calendar.html')
 
-@csrf_protect
-def generate_and_edit(request):
-    print("generate_and_edit が呼び出された")
+def generate_time_slots(start, end, unit):
+    slots = []
+    current = datetime.combine(datetime.today(), start)
+    end_dt = datetime.combine(datetime.today(), end)
+    while current <= end_dt:
+        slots.append(current.strftime('%H:%M'))
+        current += timedelta(minutes=unit)
+    return slots
 
-    if request.method == 'POST':
-        today = timezone.now().date()
-        start_of_week = today - timedelta(days=today.weekday())
-        end_of_week = start_of_week + timedelta(days=6)
+def edit_shift(request, date):
+    # 仮データ（将来的にShiftConfigurationから取得）
+    opening_time = time(9, 0)
+    closing_time = time(23, 0)
+    shift_unit = 30
 
-        week, _ = Week.objects.get_or_create(start_date=start_of_week, end_date=end_of_week)
-        weekly_shifts = WeeklyShift.objects.filter(week_start_date=start_of_week)
-
-        print(f"WeeklyShift 件数: {weekly_shifts.count()}")
-
-        # 曜日 → 日数マップ
-        weekday_map = {
-            '月曜日': 0,
-            '火曜日': 1,
-            '水曜日': 2,
-            '木曜日': 3,
-            '金曜日': 4,
-            '土曜日': 5,
-            '日曜日': 6
-        }
-
-        for weekly in weekly_shifts:
-            print(f"User: {weekly.line_user_id}, ShiftData: {weekly.shift_data}")
-
-            # CustomUser → Staff の紐付け
-            custom_user = CustomUser.objects.filter(line_user_id=weekly.line_user_id).first()
-            if not custom_user:
-                print(f"CustomUser が見つかりません: {weekly.line_user_id}")
-                continue
-
-            staff = Staff.objects.filter(line_user_id=custom_user.line_user_id).first()
-            if not staff:
-                print(f"Staff が見つかりません: {custom_user.name}")
-                default_role = Role.objects.filter(name="一般").first()
-                staff = Staff.objects.create(
-                    line_user_id=custom_user.line_user_id,
-                    name=custom_user.name,
-                    role=default_role
-                )
-                print(f"Staff を自動作成: {staff.name}")
-
-            shift_data_list = weekly.shift_data
-
-            if isinstance(shift_data_list, dict):
-                # 曜日形式 {'月曜日': {...}, ...}
-                for day_name, day_data in shift_data_list.items():
-                    if day_data.get("unavailable"):
-                        continue
-
-                    start_str = day_data.get("start")
-                    end_str = day_data.get("end")
-                    if not (start_str and end_str):
-                        continue
-
-                    try:
-                        shift_date = start_of_week + timedelta(days=weekday_map.get(day_name, 0))
-                        start_time = datetime.strptime(start_str, "%H:%M").time()
-                        end_time = datetime.strptime(end_str, "%H:%M").time()
-                    except Exception as e:
-                        print(f"エラー（日付変換）: {e}")
-                        continue
-
-                    _create_shift_and_preference(week, staff, shift_date, start_time, end_time)
-
-            elif isinstance(shift_data_list, list):
-                # 日付形式 [{'date': '07/07', 'start_time': '00:00', ...}]
-                for day_data in shift_data_list:
-                    if day_data.get("unavailable"):
-                        continue
-
-                    date_str = day_data.get("date")
-                    start_str = day_data.get("start_time")
-                    end_str = day_data.get("end_time")
-
-                    if not (date_str and start_str and end_str):
-                        continue
-
-                    try:
-                        shift_date = datetime.strptime(f"{today.year}/{date_str}", "%Y/%m/%d").date()
-                        start_time = datetime.strptime(start_str, "%H:%M").time()
-                        end_time = datetime.strptime(end_str, "%H:%M").time()
-                    except ValueError as e:
-                        print(f"エラー（日付変換）: {e}")
-                        continue
-
-                    _create_shift_and_preference(week, staff, shift_date, start_time, end_time)
-
-        # 割り当て処理実行
-        assign_shifts_for_week(week.id)
-        return redirect('shift_list')
-
-    return render(request, 'dashboard.html')
-
-def _create_shift_and_preference(week, staff, shift_date, start_time, end_time):
-    existing_pref_count = ShiftPreference.objects.filter(
-        Q(shift__week=week) &
-        Q(date=shift_date) &
-        Q(start_time=start_time) &
-        Q(end_time=end_time)
-    ).count()
-
-    required_staff = max(existing_pref_count + 1, 1)
-
-    shift, created = Shift.objects.get_or_create(
-        week=week,
-        date=shift_date,
-        start_time=start_time,
-        end_time=end_time,
-        defaults={"required_staff": required_staff}
-    )
-
-    if created:
-        print(f"Shift 作成: {shift.date} {shift.start_time}-{shift.end_time}, required: {required_staff}")
-
-    ShiftPreference.objects.get_or_create(
-        staff=staff,
-        shift=shift,
-        defaults={
-            "date": shift_date,
-            "start_time": start_time,
-            "end_time": end_time
-        }
-    )
-
-
-@csrf_protect
-def shift_list(request):
-    today = date.today()
-    week_start = today - timedelta(days=today.weekday())
-    week_end = week_start + timedelta(days=6)
-
-    week = Week.objects.filter(start_date=week_start, end_date=week_end).first()
-    if not week:
-        week = Week.objects.create(start_date=week_start, end_date=week_end)
-
-    # 必要なら再割当
-    if not AssignedShift.objects.filter(shift__week=week).exists():
-        assign_shifts_for_week(week.id)
-
-    shifts = Shift.objects.filter(week=week).prefetch_related(
-        Prefetch('assignedshift_set', queryset=AssignedShift.objects.select_related('staff'))
-    ).order_by('date', 'start_time')
-
-    staff_list = Staff.objects.all()
-
-    print(f"取得したシフト数: {shifts.count()}")
-    print(f"スタッフ数: {staff_list.count()}")
-
-    return render(request, 'shift_list.html', {
-        'shifts': shifts,
-        'staff_list': staff_list,
-    })
-
-
-def view_submissions(request):
-    return render(request, 'view_submissions.html')
-
-
-from django.contrib.admin.views.decorators import staff_member_required
-
-@staff_member_required
-def weekly_submission_status(request):
-    today = date.today()
-    week_start = today - timedelta(days=today.weekday())
-
-    all_users = WeeklyShift.objects.values_list('line_user_id', flat=True).distinct()
-    submitted_users = WeeklyShift.objects.filter(week_start_date=week_start).values_list('line_user_id', flat=True)
-
-    status_list = []
-    for user in all_users:
-        status_list.append({
-            'line_user_id': user,
-            'submitted': user in submitted_users,
-        })
-
-    return render(request, 'shift/view_submissions.html', {
-        'week_start': week_start,
-        'status_list': status_list
-    })
+    context = {
+        "target_date": date,
+        "time_slots": generate_time_slots(opening_time, closing_time, shift_unit),
+        "users": [],  # 仮（データなし）
+    }
+    return render(request, "CreateShift/edit_shift.html", context)

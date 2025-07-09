@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>シフト編集 - {{ target_date }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2em;
+            background: #f9f9f9;
+        }
+
+        h2 {
+            margin-bottom: 1em;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border: 1px solid #ccc;
+        }
+
+        table {
+            border-collapse: collapse;
+            min-width: 1000px;
+            width: max-content;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            text-align: center;
+            padding: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        th {
+            background-color: #eef;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        .working {
+            background-color: #00aaff;
+            color: white;
+            cursor: pointer;
+        }
+
+        .empty {
+            background-color: #fff;
+            cursor: pointer;
+        }
+
+        .employee-name {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+
+        .fixed-col {
+            background-color: #f8f8f8;
+            position: sticky;
+            left: 0;
+            z-index: 1;
+        }
+
+        .thead {
+            height: 0px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>{{ target_date }} のシフト編集</h2>
+    <div style="display: flex; overflow-x: auto;">
+        <!-- 固定テーブル -->
+        <table style="min-width: 250px;">
+            <thead>
+                <tr>
+                    <th>名前</th>
+                    <th>区分</th>
+                    <th>出勤時間</th>
+                    <th>退勤時間</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.name }}</td>
+                    <td>{{ user.role|default:"-" }}</td>
+                    <td>{{ user.start|default:"-" }}</td>
+                    <td>{{ user.end|default:"-" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- 時間スロットテーブル -->
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        {% for time in time_slots %}
+                        <th>{{ time }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        {% for slot in time_slots %}
+                        {% if user.shift_slots and slot in user.shift_slots %}
+                        <td class="working"></td>
+                        {% else %}
+                        <td class="empty"></td>
+                        {% endif %}
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+
+    <script>
+        document.querySelectorAll("td[data-user]").forEach(cell => {
+            cell.addEventListener("click", () => {
+                cell.classList.toggle("working");
+                cell.classList.toggle("empty");
+            });
+        });
+    </script>
+</body>
+
+</html>

@@ -2,8 +2,6 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('', views.dashboard, name='dashboard'),
-    path('generate_and_edit/', views.generate_and_edit, name='generate_and_edit'),
-    path('shifts/', views.shift_list, name='shift_list'),
-    path('weekly_submission_status/', views.weekly_submission_status, name='weekly_submission_status'),
+    path('calendar/', views.calendar_view, name='shift_calendar'),
+    path('edit/<str:date>/', views.edit_shift, name='edit_shift'),
 ]

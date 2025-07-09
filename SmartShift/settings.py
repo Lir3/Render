@@ -44,10 +44,10 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     'lineShift.apps.LineshiftConfig',
-    'createShift.apps.CreateshiftConfig',
-    'calendarShift.apps.CalendarshiftConfig',
     'ShiftStatusCheck',
     'shiftConfig',
+    'Dashboard',
+    'CreateShift',
 ]
 
 MIDDLEWARE = [
