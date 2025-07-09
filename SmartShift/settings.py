@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     'ShiftStatusCheck',
     'shiftConfig',
     'Dashboard',
-    'CreateShift',
+    'createShift',
 ]
 
 MIDDLEWARE = [
