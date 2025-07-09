@@ -283,7 +283,6 @@
                     .then(profile => {
                         if (profile) {
                             this.userId = profile.userId;
-                            this.userName = profile.displayName;
                         }
                     })
                     .catch(err => {
