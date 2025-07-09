@@ -310,6 +310,11 @@
                 }
                 ,
                 submitForm() {
+                    if (!this.userName || this.userName.trim() === "") {
+                        alert("名前を入力してください");
+                        return;
+                    }
+
                     for (let day of this.weekdays) {
                         if (!day.unavailable) {
                             if (!day.start_time || !day.end_time) {
