@@ -5,7 +5,6 @@ urlpatterns = [
     # 保存系
     path('submit_shift/', views.submit_shift, name='submit_shift'),
     path('liff/submit_shift/', views.submit_shift, name='liff_submit_shift'),
-    path('liff/submit_weekly_shift/', views.submit_weekly_shift, name='submit_weekly_shift'),
 
     # LIFF画面表示
     path('liff/', views.liff_page, name='liff_page'),
