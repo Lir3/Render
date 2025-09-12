@@ -70,6 +70,46 @@ def submit_shift(request):
 
     return JsonResponse({'error': 'Invalid method'}, status=405)
 
+@csrf_exempt
+def submit_contract_shift(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            line_user_id = data.get('line_user_id')
+            shifts = data.get('shifts', [])
+            user_name = data.get('name')
+
+            if not line_user_id or not shifts or not user_name:
+                return JsonResponse({'error': 'Missing data'}, status=400)
+
+            # CustomUser 保存（存在すれば上書き）
+            CustomUser.objects.update_or_create(
+                line_user_id=line_user_id,
+                defaults={'name': user_name}
+            )
+
+            # ContractShift 上書き保存
+            ContractShift.objects.filter(line_user_id=line_user_id).delete()
+            formatted_shift = {}
+            for day in shifts:
+                formatted_shift[day.get("name")] = {
+                    "start": day.get("start_time") or None,
+                    "end": day.get("end_time") or None,
+                    "unavailable": day.get("unavailable", False)
+                }
+
+            ContractShift.objects.create(
+                line_user_id=line_user_id,
+                name=user_name,
+                shift_data=formatted_shift
+            )
+
+            return JsonResponse({'status': 'success'})
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Invalid method'}, status=405)
 
 # ------------------------------
 # 前週のシフトを取得

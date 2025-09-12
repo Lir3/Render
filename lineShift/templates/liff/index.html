@@ -330,14 +330,7 @@
                             }
                         }
                     }
-
-                    const today = new Date();
-                    const day = today.getDay(); // 0=日曜,1=月曜...
-                    const diff = (day === 0 ? -6 : 1) - day; // 月曜を基準
-                    const monday = new Date(today.setDate(today.getDate() + diff));
-                    const weekStart = monday.toISOString().split("T")[0]; // "YYYY-MM-DD"
-
-                    fetch("/lineShift/liff/submit_shift/", {
+                    fetch("/lineShift/liff/submit_contract_shift/", {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json"
@@ -345,8 +338,7 @@
                         body: JSON.stringify({
                             line_user_id: this.userId,
                             name: this.userName,
-                            shifts: this.weekdays,
-                            weekStart: weekStart
+                            shifts: this.weekdays
                         })
                     }).then(response => {
                         if (response.ok) {
