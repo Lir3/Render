@@ -11,62 +11,54 @@ from shiftConfig.models import ShiftConfiguration
 # ------------------------------
 @csrf_exempt
 def submit_shift(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            line_user_id = data.get('line_user_id')
-            shifts = data.get('shifts', [])
-            user_name = data.get('name')
-            week_start_str = data.get("week_start")  # Vue から送信される週開始日
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid method'}, status=405)
 
-            if not line_user_id or not shifts or not user_name or not week_start_str:
-                return JsonResponse({'error': 'Missing data'}, status=400)
+    try:
+        data = json.loads(request.body)
+        line_user_id = data.get('line_user_id')
+        shifts = data.get('shifts', [])
+        user_name = data.get('name')
+        week_start_str = data.get("week_start")  # Vue から送信される週開始日
 
-            # CustomUser 保存（存在すれば上書き）
-            CustomUser.objects.update_or_create(
-                line_user_id=line_user_id,
-                defaults={'name': user_name}
-            )
+        if not line_user_id or not shifts or not user_name or not week_start_str:
+            return JsonResponse({'error': 'Missing data'}, status=400)
 
-            # ContractShift 上書き保存
-            ContractShift.objects.filter(line_user_id=line_user_id).delete()
-            formatted_shift = {}
-            for day in shifts:
-                formatted_shift[day.get("name")] = {
-                    "start": day.get("start_time") or None,
-                    "end": day.get("end_time") or None,
-                    "unavailable": day.get("unavailable", False)
-                }
+        # CustomUser 保存（LINE名で更新しても問題なし）
+        CustomUser.objects.update_or_create(
+            line_user_id=line_user_id,
+            defaults={'name': user_name}
+        )
 
-            ContractShift.objects.create(
-                line_user_id=line_user_id,
-                name=user_name,
-                shift_data=formatted_shift
-            )
+        # 契約シフトの名前を取得
+        contract_shift = ContractShift.objects.filter(line_user_id=line_user_id).first()
+        contract_name = contract_shift.name if contract_shift else user_name
 
-            # WeeklyShift にも保存
-            week_start_date = datetime.strptime(week_start_str, "%Y-%m-%d").date()
-            WeeklyShift.objects.filter(line_user_id=line_user_id, week_start_date=week_start_date).delete()
+        # WeeklyShift に保存（契約シフトの名前を使用）
+        week_start_date = datetime.strptime(week_start_str, "%Y-%m-%d").date()
+        WeeklyShift.objects.filter(line_user_id=line_user_id, week_start_date=week_start_date).delete()
 
-            weekly_shift_data = []
-            for day in shifts:
-                weekly_shift_data.append({
-                    "name": day.get("name"),
-                    "start_time": day.get("start_time") or "",
-                    "end_time": day.get("end_time") or "",
-                    "unavailable": day.get("unavailable", False)
-                })
+        weekly_shift_data = []
+        for day in shifts:
+            weekly_shift_data.append({
+                "name": day.get("name"),
+                "start_time": day.get("start_time") or "",
+                "end_time": day.get("end_time") or "",
+                "unavailable": day.get("unavailable", False)
+            })
 
-            WeeklyShift.objects.create(
-                line_user_id=line_user_id,
-                week_start_date=week_start_date,
-                shift_data=weekly_shift_data
-            )
+        WeeklyShift.objects.create(
+            line_user_id=line_user_id,
+            week_start_date=week_start_date,
+            name=contract_name,  # ← 契約シフト名を優先
+            shift_data=weekly_shift_data
+        )
 
-            return JsonResponse({'status': 'success'})
+        return JsonResponse({'status': 'success'})
 
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
 
     return JsonResponse({'error': 'Invalid method'}, status=405)
 
