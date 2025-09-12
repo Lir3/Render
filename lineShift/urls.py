@@ -4,7 +4,7 @@ from . import views
 urlpatterns = [
     # 保存系
     path('submit_shift/', views.submit_shift, name='submit_shift'),
-    path('submit_contract_shift/', views.submit_contract_shift, name='submit_contract_shift'),
+    path('liff/submit_contract_shift/', views.submit_contract_shift, name='submit_contract_shift'),
     path('liff/submit_shift/', views.submit_shift, name='liff_submit_shift'),
 
     # LIFF画面表示
