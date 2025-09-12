@@ -18,23 +18,15 @@ def submit_shift(request):
         data = json.loads(request.body)
         line_user_id = data.get('line_user_id')
         shifts = data.get('shifts', [])
-        user_name = data.get('name')
         week_start_str = data.get("week_start")  # Vue から送信される週開始日
 
-        if not line_user_id or not shifts or not user_name or not week_start_str:
+        if not line_user_id or not shifts or not week_start_str:
             return JsonResponse({'error': 'Missing data'}, status=400)
 
-        # CustomUser 保存（LINE名で更新しても問題なし）
-        CustomUser.objects.update_or_create(
-            line_user_id=line_user_id,
-            defaults={'name': user_name}
-        )
+        # CustomUser は上書きせず、契約シフト名も使わない場合は何もしない
+        # 例: CustomUser.objects.update_or_create(...) は削除
 
-        # 契約シフトの名前を取得
-        contract_shift = ContractShift.objects.filter(line_user_id=line_user_id).first()
-        contract_name = contract_shift.name if contract_shift else user_name
-
-        # WeeklyShift に保存（契約シフトの名前を使用）
+        # WeeklyShift に保存
         week_start_date = datetime.strptime(week_start_str, "%Y-%m-%d").date()
         WeeklyShift.objects.filter(line_user_id=line_user_id, week_start_date=week_start_date).delete()
 
@@ -50,17 +42,16 @@ def submit_shift(request):
         WeeklyShift.objects.create(
             line_user_id=line_user_id,
             week_start_date=week_start_date,
-            name=contract_name,  # ← 契約シフト名を優先
             shift_data=weekly_shift_data
         )
 
         return JsonResponse({'status': 'success'})
 
     except Exception as e:
+        import traceback
+        print(traceback.format_exc())  # 詳細ログ出力
         return JsonResponse({'error': str(e)}, status=500)
 
-
-    return JsonResponse({'error': 'Invalid method'}, status=405)
 
 @csrf_exempt
 def submit_contract_shift(request):
