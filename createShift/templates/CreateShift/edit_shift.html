@@ -135,7 +135,7 @@
                 {% for user in users %}
                 <tr>
                     <td class="fixed-col">{{ user.name }}</td>
-                    <td class="fixed-col-2">{{ user.role|default:"-" }}</td>
+                    <td class="fixed-col-2">アルバイト</td>
                     <td class="fixed-col-3">{{ user.start|default:"-" }}</td>
                     <td class="fixed-col-4">{{ user.end|default:"-" }}</td>
                     {% for time in time_slots %}
